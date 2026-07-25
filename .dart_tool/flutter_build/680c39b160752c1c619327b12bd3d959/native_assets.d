@@ -1,0 +1,1 @@
+ D:\\safestep2\\.dart_tool\\flutter_build\\680c39b160752c1c619327b12bd3d959\\native_assets.yaml: 
