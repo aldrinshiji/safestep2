@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:safestep2/screens/settings_screen.dart';
-import '../widgets/sos_button.dart';
-import '../widgets/status_card.dart';
+import '../services/shake_service.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -11,18 +10,43 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isProtectionActive = true;
+  final ShakeService _shakeService = ShakeService();
 
-  void _triggerSOS() {
+  @override
+  void initState() {
+    super.initState();
+    // Start monitoring accelerometer for emergency shake gestures
+    _shakeService.startListening(onShake: _handleEmergencyTrigger);
+  }
+
+  @override
+  void dispose() {
+    _shakeService.stopListening();
+    super.dispose();
+  }
+
+  void _handleEmergencyTrigger() {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text("🚨 Emergency Triggered"),
-        content: const Text("Recording video, fetching location, and sending alert to contacts..."),
+        icon: const Icon(Icons.warning_amber_rounded, size: 50, color: Colors.red),
+        title: const Text("EMERGENCY TRIGGERED!"),
+        content: const Text(
+          "Shake gesture detected! SafeStep is preparing to broadcast your location and start evidence capture.",
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("CANCEL"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              // Future location & camera logic will hook in here
+            },
+            child: const Text("SEND SOS NOW", style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -32,11 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-     appBar: AppBar(
-        title: const Text(
-          "SafeStep 2",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+      appBar: AppBar(
+        title: const Text('SafeStep 2'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -49,41 +70,23 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // System Protection Status Indicator
-              StatusCard(isActive: isProtectionActive),
-
-              // SOS Trigger Button
-              Center(
-                child: SOSButton(onTap: _triggerSOS),
-              ),
-
-              // Quick Information Footer
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.info_outline, size: 18, color: Colors.grey),
-                    SizedBox(width: 8),
-                    Text(
-                      "Shake hard or long-press volume button anywhere",
-                      style: TextStyle(fontSize: 11, color: Colors.black87),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+      body: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.shield, size: 100, color: Colors.redAccent),
+            SizedBox(height: 20),
+            Text(
+              "System Active",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 8),
+            Text(
+              "Shake your device to trigger an emergency SOS alert.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
         ),
       ),
     );

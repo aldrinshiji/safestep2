@@ -51,6 +51,8 @@ android {
 }
 flutter {
     source '../..'
+    
+
 }
 
 dependencies {}
