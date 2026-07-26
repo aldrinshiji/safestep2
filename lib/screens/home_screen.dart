@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:background_sms/background_sms.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../services/shake_service.dart';
 import '../services/location_service.dart';
 import 'settings_screen.dart';
@@ -20,7 +22,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _requestPermissions();
     _shakeService.startListening(onShake: _handleEmergencyTrigger);
+  }
+
+  Future<void> _requestPermissions() async {
+    await Permission.sms.request();
   }
 
   @override
@@ -29,9 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<String> _getEmergencyContact() async {
+  Future<Map<String, String>> _getSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('emergency_contact') ?? "+919876543210";
+    return {
+      'contact': prefs.getString('emergency_contact') ?? "+919876543210",
+      'mode': prefs.getString('alert_mode') ?? 'whatsapp',
+    };
   }
 
   Future<void> _handleEmergencyTrigger() async {
@@ -60,88 +70,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
 
+    // Fetch settings
+    Map<String, String> settings = await _getSettings();
+    String emergencyContact = settings['contact']!;
+    String alertMode = settings['mode']!;
+
+    String messageText =
+        "EMERGENCY! I need help. My current location is: $addressText ($coordsText). Please track me!";
+
+    if (alertMode == 'sms') {
+      // Send Automated Background SMS using BackgroundSms
+      try {
+        SmsStatus result = await BackgroundSms.sendMessage(
+          phoneNumber: emergencyContact,
+          message: messageText,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result == SmsStatus.sent
+                    ? "Emergency SMS sent automatically!"
+                    : "Failed to send automatic SMS.",
+              ),
+              backgroundColor:
+                  result == SmsStatus.sent ? Colors.green : Colors.red,
+            ),
+          );
+        }
+      } catch (error) {
+        debugPrint("Error sending background SMS: $error");
+      }
+    } else {
+      // Open WhatsApp Automatically
+      String formattedNumber =
+          emergencyContact.replaceAll(RegExp(r'[^0-9]'), '');
+      String encodedMessage = Uri.encodeComponent(messageText);
+      final Uri whatsappUri =
+          Uri.parse("https://wa.me/$formattedNumber?text=$encodedMessage");
+
+      try {
+        if (await canLaunchUrl(whatsappUri)) {
+          await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+        } else {
+          debugPrint("Could not launch WhatsApp");
+        }
+      } catch (error) {
+        debugPrint("Error launching WhatsApp: $error");
+      }
+    }
+
+    if (!mounted) return;
     showDialog(
       context: context,
-      barrierDismissible: false,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.warning_amber_rounded,
             size: 50, color: Colors.red),
-        title: const Text("EMERGENCY TRIGGERED!"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("SafeStep captured your real-time location:"),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.red),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          addressText,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (coordsText.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      coordsText,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ]
-                ],
-              ),
-            ),
-          ],
-        ),
+        title: const Text("SOS TRIGGERED!"),
+        content: Text(
+            "Emergency alert dispatched via ${alertMode.toUpperCase()} to $emergencyContact."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("CANCEL"),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(context);
-
-              String emergencyContact = await _getEmergencyContact();
-              // Cleans the phone number to digits only (required for WhatsApp links)
-              String formattedNumber =
-                  emergencyContact.replaceAll(RegExp(r'[^0-9]'), '');
-
-              String message = Uri.encodeComponent(
-                  "EMERGENCY! I need help. My current location is: $addressText ($coordsText). Please track me!");
-
-              // WhatsApp Direct Link Scheme
-              final Uri whatsappUri =
-                  Uri.parse("https://wa.me/$formattedNumber?text=$message");
-
-              try {
-                if (await canLaunchUrl(whatsappUri)) {
-                  await launchUrl(whatsappUri,
-                      mode: LaunchMode.externalApplication);
-                } else {
-                  debugPrint("Could not launch WhatsApp");
-                }
-              } catch (error) {
-                debugPrint("Error launching WhatsApp: $error");
-              }
-            },
-            child: const Text("SEND SOS NOW",
-                style: TextStyle(color: Colors.white)),
+            child: const Text("OK"),
           ),
         ],
       ),
