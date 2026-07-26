@@ -29,3 +29,17 @@ subprojects {
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
+subprojects {
+    project.configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.core' && details.requested.name == 'core') {
+                details.useVersion '1.13.1'
+            }
+        }
+    }
+    plugins.withId('com.android.library') {
+        if (android.namespace == null) {
+            android.namespace = project.group
+        }
+    }
+}

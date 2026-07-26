@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/shake_service.dart';
 import '../services/location_service.dart';
 import 'settings_screen.dart';
@@ -25,6 +27,11 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _shakeService.stopListening();
     super.dispose();
+  }
+
+  Future<String> _getEmergencyContact() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('emergency_contact') ?? "+919876543210";
   }
 
   Future<void> _handleEmergencyTrigger() async {
@@ -107,8 +114,31 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+
+              String emergencyContact = await _getEmergencyContact();
+              // Cleans the phone number to digits only (required for WhatsApp links)
+              String formattedNumber =
+                  emergencyContact.replaceAll(RegExp(r'[^0-9]'), '');
+
+              String message = Uri.encodeComponent(
+                  "EMERGENCY! I need help. My current location is: $addressText ($coordsText). Please track me!");
+
+              // WhatsApp Direct Link Scheme
+              final Uri whatsappUri =
+                  Uri.parse("https://wa.me/$formattedNumber?text=$message");
+
+              try {
+                if (await canLaunchUrl(whatsappUri)) {
+                  await launchUrl(whatsappUri,
+                      mode: LaunchMode.externalApplication);
+                } else {
+                  debugPrint("Could not launch WhatsApp");
+                }
+              } catch (error) {
+                debugPrint("Error launching WhatsApp: $error");
+              }
             },
             child: const Text("SEND SOS NOW",
                 style: TextStyle(color: Colors.white)),
@@ -126,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );

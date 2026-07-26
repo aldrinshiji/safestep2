@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -10,155 +9,86 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final TextEditingController _primaryEmailController = TextEditingController();
-  final TextEditingController _secondaryEmailController = TextEditingController();
-
-  bool _shakeDetectionEnabled = true;
-  bool _volumeTriggerEnabled = true;
-  bool _isSaving = false;
+  final TextEditingController _phoneController = TextEditingController();
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    _loadSavedNumber();
   }
 
-  // Load saved preferences
-  Future<void> _loadSettings() async {
+  Future<void> _loadSavedNumber() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _primaryEmailController.text = prefs.getString('primary_email') ?? '';
-      _secondaryEmailController.text = prefs.getString('secondary_email') ?? '';
-      _shakeDetectionEnabled = prefs.getBool('shake_enabled') ?? true;
-      _volumeTriggerEnabled = prefs.getBool('volume_enabled') ?? true;
+      _phoneController.text =
+          prefs.getString('emergency_contact') ?? "+919876543210";
+      _isLoading = false;
     });
   }
 
-  // Save updated preferences
-  Future<void> _saveSettings() async {
-    setState(() => _isSaving = true);
+  Future<void> _saveNumber() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('emergency_contact', _phoneController.text.trim());
 
-    await prefs.setString('primary_email', _primaryEmailController.text.trim());
-    await prefs.setString('secondary_email', _secondaryEmailController.text.trim());
-    await prefs.setBool('shake_enabled', _shakeDetectionEnabled);
-    await prefs.setBool('volume_enabled', _volumeTriggerEnabled);
-
-    setState(() => _isSaving = false);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Settings saved successfully!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _primaryEmailController.dispose();
-    _secondaryEmailController.dispose();
-    super.dispose();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Emergency contact saved successfully!")),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Settings & Guardians"),
+        title: const Text("Emergency Settings"),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Guardian Contacts",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "SOS alerts, live location, and recorded video evidence will be emailed here.",
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
-
-              // Primary Email
-              TextField(
-                controller: _primaryEmailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: "Primary Guardian Email",
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Secondary Email
-              TextField(
-                controller: _secondaryEmailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: "Secondary Guardian Email (Optional)",
-                  prefixIcon: Icon(Icons.mark_email_read_outlined),
-                  border: OutlineInputBorder(),
-                ),
-              ),
-
-              const Divider(height: 40),
-
-              const Text(
-                "Emergency Triggers",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-
-              // Shake Switch
-              SwitchListTile(
-                title: const Text("Shake Detection"),
-                subtitle: const Text("Trigger SOS by shaking phone hard"),
-                value: _shakeDetectionEnabled,
-                onChanged: (val) => setState(() => _shakeDetectionEnabled = val),
-              ),
-
-              // Volume Press Switch
-              SwitchListTile(
-                title: const Text("Volume Button Hold"),
-                subtitle: const Text("Trigger SOS by holding volume button for 3 seconds"),
-                value: _volumeTriggerEnabled,
-                onChanged: (val) => setState(() => _volumeTriggerEnabled = val),
-              ),
-
-              const SizedBox(height: 30),
-
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving ? null : _saveSettings,
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.save),
-                  label: Text(_isSaving ? "SAVING..." : "SAVE SETTINGS"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Guardian / Emergency Contact Number",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    "Enter the phone number where SOS alerts and live location will be sent via SMS.",
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      labelText: "Phone Number",
+                      prefixIcon: const Icon(Icons.phone),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: _saveNumber,
+                      child: const Text(
+                        "SAVE CONTACT",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                  )
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }
