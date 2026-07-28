@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:background_sms/background_sms.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:camera/camera.dart';
+import 'package:gal/gal.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../services/shake_service.dart';
 import '../services/location_service.dart';
 import 'settings_screen.dart';
@@ -17,17 +21,24 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ShakeService _shakeService = ShakeService();
   final LocationService _locationService = LocationService();
-  bool _isFetchingLocation = false;
+  bool _isHandlingEmergency = false;
+  String _statusText = "System Active";
 
   @override
   void initState() {
     super.initState();
-    _requestPermissions();
+    _requestAllPermissions();
     _shakeService.startListening(onShake: _handleEmergencyTrigger);
   }
 
-  Future<void> _requestPermissions() async {
-    await Permission.sms.request();
+  Future<void> _requestAllPermissions() async {
+    await [
+      Permission.sms,
+      Permission.location,
+      Permission.camera,
+      Permission.microphone,
+      Permission.storage,
+    ].request();
   }
 
   @override
@@ -44,9 +55,74 @@ class _HomeScreenState extends State<HomeScreen> {
     };
   }
 
+  // Record 10-second background video, save to gallery, and upload to Firebase
+  Future<String?> _recordAndUploadEmergencyVideo() async {
+    try {
+      // 1. Get available cameras
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) return null;
+
+      // Select back camera
+      final backCamera = cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => cameras.first,
+      );
+
+      final CameraController cameraController = CameraController(
+        backCamera,
+        ResolutionPreset.medium,
+        enableAudio: true,
+      );
+
+      await cameraController.initialize();
+
+      // Start recording
+      await cameraController.startVideoRecording();
+
+      // Keep recording for 10 seconds
+      await Future.delayed(const Duration(seconds: 10));
+
+      // Stop recording and get file
+      XFile videoFile = await cameraController.stopVideoRecording();
+      await cameraController.dispose();
+
+      File file = File(videoFile.path);
+
+      // 2. Save a copy directly to the phone's Gallery
+      try {
+        await Gal.putVideo(file.path);
+        debugPrint("Video saved to gallery successfully.");
+      } catch (e) {
+        debugPrint("Error saving to gallery: $e");
+      }
+
+      // 3. Upload to Firebase Storage
+      setState(() {
+        _statusText = "Uploading emergency evidence...";
+      });
+
+      String fileName =
+          "sos_video_${DateTime.now().millisecondsSinceEpoch}.mp4";
+      Reference storageRef =
+          FirebaseStorage.instance.ref().child("emergency_videos/$fileName");
+
+      UploadTask uploadTask = storageRef.putFile(file);
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      debugPrint("Error in video recording/upload process: $e");
+      return null;
+    }
+  }
+
   Future<void> _handleEmergencyTrigger() async {
+    if (_isHandlingEmergency) return;
+
     setState(() {
-      _isFetchingLocation = true;
+      _isHandlingEmergency = true;
+      _statusText = "EMERGENCY TRIGGERED!";
     });
 
     String addressText = "Fetching location...";
@@ -60,13 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       addressText = "Error getting location";
       coordsText = e.toString();
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isFetchingLocation = false;
-        });
-      }
     }
+
+    // Record video, save to gallery, and upload to Firebase
+    setState(() {
+      _statusText = "Recording 10s emergency video...";
+    });
+    String? videoUrl = await _recordAndUploadEmergencyVideo();
 
     if (!mounted) return;
 
@@ -76,10 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
     String alertMode = settings['mode']!;
 
     String messageText =
-        "EMERGENCY! I need help. My current location is: $addressText ($coordsText). Please track me!";
+        "EMERGENCY! I need help. Location: $addressText ($coordsText).";
+    if (videoUrl != null) {
+      messageText += " Watch 10s emergency video footage here: $videoUrl";
+    }
 
     if (alertMode == 'sms') {
-      // Send Automated Background SMS using BackgroundSms
       try {
         SmsStatus result = await BackgroundSms.sendMessage(
           phoneNumber: emergencyContact,
@@ -91,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SnackBar(
               content: Text(
                 result == SmsStatus.sent
-                    ? "Emergency SMS sent automatically!"
+                    ? "Emergency SMS & Video link sent!"
                     : "Failed to send automatic SMS.",
               ),
               backgroundColor:
@@ -103,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
         debugPrint("Error sending background SMS: $error");
       }
     } else {
-      // Open WhatsApp Automatically
       String formattedNumber =
           emergencyContact.replaceAll(RegExp(r'[^0-9]'), '');
       String encodedMessage = Uri.encodeComponent(messageText);
@@ -122,14 +199,20 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (!mounted) return;
+
+    setState(() {
+      _isHandlingEmergency = false;
+      _statusText = "System Active";
+    });
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.warning_amber_rounded,
             size: 50, color: Colors.red),
-        title: const Text("SOS TRIGGERED!"),
+        title: const Text("SOS DISPATCHED!"),
         content: Text(
-            "Emergency alert dispatched via ${alertMode.toUpperCase()} to $emergencyContact."),
+            "10s video recorded, saved to gallery, uploaded to cloud, and sent via ${alertMode.toUpperCase()} to $emergencyContact."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -163,19 +246,23 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const Icon(Icons.shield, size: 100, color: Colors.redAccent),
             const SizedBox(height: 20),
-            const Text(
-              "System Active",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              _statusText,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            const Text(
-              "Shake your device to trigger an emergency SOS alert.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                "Shake device or tap below to record 10s video, save to gallery, and alert guardian.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
             ),
             const SizedBox(height: 30),
-            if (_isFetchingLocation)
-              const CircularProgressIndicator()
+            if (_isHandlingEmergency)
+              const CircularProgressIndicator(color: Colors.red)
             else
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(

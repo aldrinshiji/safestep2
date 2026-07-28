@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -24,7 +25,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.example.safestep2"
-    compileSdk 34
+    compileSdk 35
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -37,8 +38,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.safestep2"
-        minSdk 21
-        targetSdk 34
+        minSdk 24
+        targetSdk 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -55,4 +56,20 @@ flutter {
 
 }
 
-dependencies {}
+dependencies {
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:33.9.0')
+
+    // Add Firebase Products you want to use (Analytics & Storage for videos)
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-storage'
+}
+
+// Add this at the very bottom of android/app/build.gradle
+afterEvaluate {
+    project.extensions.findByType(com.android.build.gradle.internal.dsl.BaseAppModuleExtension)?.tap {
+        if (compileSdkVersion == null) {
+            compileSdk = 35
+        }
+    }
+}
