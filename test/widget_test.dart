@@ -10,11 +10,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:safestep2/main.dart';
 
 void main() {
-  testWidgets('SafeStep 2 smoke test', (WidgetTester tester) async {
+  testWidgets('SafeStep smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(const SafeStepApp());
 
-    // Verify that system active text or title exists.
-    expect(find.text('SafeStep 2'), findsOneWidget);
+    // Verify that title exists.
+    expect(find.text('SafeStep'), findsOneWidget);
   });
 }
+
