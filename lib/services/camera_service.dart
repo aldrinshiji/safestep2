@@ -10,7 +10,7 @@ class CameraService {
   CameraController? _controller;
 
   /// Record video with audio for specified duration in seconds
-  Future<File?> recordVideo({int durationSeconds = 10}) async {
+  Future<File?> recordVideo({int durationSeconds = 13}) async {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -31,7 +31,8 @@ class CameraService {
 
       await _controller!.initialize();
       await _controller!.startVideoRecording();
-      debugPrint("CameraService: Started recording video for $durationSeconds seconds...");
+      debugPrint(
+          "CameraService: Started recording video for $durationSeconds seconds...");
 
       await Future.delayed(Duration(seconds: durationSeconds));
 
@@ -41,7 +42,8 @@ class CameraService {
 
       final File videoFile = File(videoXFile.path);
       if (await videoFile.exists()) {
-        debugPrint("CameraService: Video recording finished. Path: ${videoFile.path}");
+        debugPrint(
+            "CameraService: Video recording finished. Path: ${videoFile.path}");
         return videoFile;
       }
     } catch (e) {

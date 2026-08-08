@@ -1,14 +1,16 @@
 class AppConstants {
   static const String appName = 'SafeStep';
-  static const String supabaseUrl = 'YOUR_SUPABASE_PROJECT_URL';
-  static const String supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
-  static const String emergencyVideosBucket = 'emergency-videos';
-  
+  static const String supabaseUrl = 'https://dymqyrpnaoqsnucytklo.supabase.co';
+  static const String supabaseAnonKey =
+      'sb_publishable_rvy7tO2y1-ndNk91Ld3ohA_nzt0Rcnk';
+  static const String emergencyVideosBucket = 'emergency_videos';
+
   // Settings Keys
   static const String keyGuardianName = 'guardian_name';
   static const String keyGuardianEmail = 'guardian_email';
   static const String keyGuardianMobile = 'guardian_mobile';
-  static const String keyAlertMethod = 'alert_method'; // 'whatsapp', 'sms', 'email', 'share'
+  static const String keyAlertMethod =
+      'alert_method'; // 'whatsapp', 'sms', 'email', 'share'
   static const String keyVideoDuration = 'video_duration'; // 10, 20, 30, 60
   static const String keyEnableShake = 'enable_shake';
   static const String keyEnableVolume = 'enable_volume';
