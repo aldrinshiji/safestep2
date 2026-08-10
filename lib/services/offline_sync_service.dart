@@ -56,6 +56,89 @@ class OfflineSyncService {
     });
   }
 
+  /// Process and upload a single emergency in the background immediately (Non-blocking)
+  Future<void> processAndUploadSingleEmergency({
+    required EmergencyModel emergency,
+    required GuardianModel guardian,
+  }) async {
+    try {
+      debugPrint(
+          "OfflineSyncService: Starting background processing for emergency ${emergency.id}");
+
+      var updatedEmergency = emergency;
+
+      // 1. Compress and Upload video if local path exists
+      if (updatedEmergency.localVideoPath != null &&
+          (updatedEmergency.publicVideoUrl == null ||
+              updatedEmergency.publicVideoUrl!.isEmpty)) {
+        final originalFile = File(updatedEmergency.localVideoPath!);
+
+        if (await originalFile.exists()) {
+          debugPrint("OfflineSyncService: Compressing video in background...");
+
+          File fileToUpload = originalFile;
+          try {
+            final mediaInfo = await VideoCompress.compressVideo(
+              originalFile.path,
+              quality: VideoQuality.LowQuality,
+              deleteOrigin: false,
+              includeAudio: true,
+            );
+            if (mediaInfo?.file != null) {
+              fileToUpload = mediaInfo!.file!;
+              debugPrint(
+                  "OfflineSyncService: Background compression successful! New size: ${await fileToUpload.length()} bytes");
+            }
+          } catch (e) {
+            debugPrint(
+                "OfflineSyncService: Compression failed, using original file: $e");
+            VideoCompress.cancelCompression();
+          }
+
+          debugPrint(
+              "OfflineSyncService: Starting background upload to Supabase...");
+          final fileName = "sos_${updatedEmergency.id}.mp4";
+          final publicUrl = await _supabaseService.uploadEmergencyVideo(
+              fileToUpload, fileName);
+
+          if (publicUrl != null) {
+            debugPrint(
+                "OfflineSyncService: Background upload successful! URL: $publicUrl");
+            updatedEmergency = updatedEmergency.copyWith(
+              publicVideoUrl: publicUrl,
+              uploadStatus: 'uploaded',
+            );
+          } else {
+            debugPrint(
+                "OfflineSyncService: Background upload returned null URL.");
+          }
+        } else {
+          debugPrint(
+              "OfflineSyncService Error: Local video file does NOT exist at path.");
+        }
+      }
+
+      // 2. Save record to Supabase DB
+      final dbSuccess = await _supabaseService.saveEmergencyRecord(
+        emergency: updatedEmergency,
+        guardian: guardian,
+      );
+
+      if (dbSuccess) {
+        debugPrint(
+            "OfflineSyncService: Successfully uploaded and synced emergency ${updatedEmergency.id}");
+      } else {
+        debugPrint("OfflineSyncService: DB save failed, re-queuing locally.");
+        await queueEmergencyLocally(
+            emergency: updatedEmergency, guardian: guardian);
+      }
+    } catch (e) {
+      debugPrint(
+          "OfflineSyncService Error during background single process: $e");
+      await queueEmergencyLocally(emergency: emergency, guardian: guardian);
+    }
+  }
+
   /// Sync all locally queued emergency events to Supabase cloud
   Future<void> syncPendingQueue() async {
     if (_isSyncing) return;
@@ -82,7 +165,6 @@ class OfflineSyncService {
           final guardian = GuardianModel.fromJson(map['guardian']);
 
           // 1. Upload video if local video exists and hasn't been uploaded yet
-          // 1. Upload video if local video exists and hasn't been uploaded yet
           if (emergency.localVideoPath != null &&
               (emergency.publicVideoUrl == null ||
                   emergency.publicVideoUrl!.isEmpty)) {
@@ -98,8 +180,7 @@ class OfflineSyncService {
               try {
                 final mediaInfo = await VideoCompress.compressVideo(
                   originalFile.path,
-                  quality: VideoQuality
-                      .LowQuality, // Compresses to a lightweight format
+                  quality: VideoQuality.LowQuality,
                   deleteOrigin: false,
                   includeAudio: true,
                 );

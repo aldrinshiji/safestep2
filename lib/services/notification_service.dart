@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/emergency_model.dart';
 import '../models/guardian_model.dart';
@@ -9,30 +10,41 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  /// Formats complete emergency alert message
-  static String formatEmergencyMessage({
+  /// Formats complete emergency alert message using user's personal details
+  static Future<String> formatEmergencyMessage({
     required EmergencyModel emergency,
     required GuardianModel guardian,
-  }) {
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Retrieve YOUR personal details from SharedPreferences
+    final myName = prefs.getString('my_name') ?? 'User';
+    final myPhone = prefs.getString('my_phone') ?? 'N/A';
+    final myEmail = prefs.getString('my_email') ?? 'N/A';
+
     final buffer = StringBuffer();
-    buffer.writeln("🚨 EMERGENCY SOS ALERT - SAFESTEP 🚨");
+    buffer.writeln("🚨 EMERGENCY ALERT - SAFESTEP 🚨");
     buffer.writeln("Emergency ID: ${emergency.id}");
     buffer.writeln("Time: ${emergency.timestamp.toString().substring(0, 19)}");
-    buffer.writeln("Guardian Name: ${guardian.name}");
-    buffer.writeln("Guardian Mobile: ${guardian.mobileNumber}");
-    buffer.writeln("Guardian Email: ${guardian.email}");
+    buffer.writeln("\n--- My Details ---");
+    buffer.writeln("Name: $myName");
+    buffer.writeln("Mobile: $myPhone");
+    buffer.writeln("Email: $myEmail");
+    buffer.writeln("\n--- Location & Device ---");
     buffer.writeln("Location: ${emergency.address}");
-    buffer.writeln("Coordinates: Lat ${emergency.latitude}, Lng ${emergency.longitude}");
+    buffer.writeln(
+        "Coordinates: Lat ${emergency.latitude}, Lng ${emergency.longitude}");
     buffer.writeln("Google Maps Link: ${emergency.googleMapsUrl}");
     buffer.writeln("Device Model: ${emergency.deviceModel}");
     buffer.writeln("Battery Level: ${emergency.batteryPercentage}%");
-    
-    if (emergency.publicVideoUrl != null && emergency.publicVideoUrl!.isNotEmpty) {
+
+    if (emergency.publicVideoUrl != null &&
+        emergency.publicVideoUrl!.isNotEmpty) {
       buffer.writeln("🎥 Emergency Video Link: ${emergency.publicVideoUrl}");
     } else {
       buffer.writeln("🎥 Emergency Video: Recorded locally on device.");
     }
-    
+
     return buffer.toString();
   }
 
@@ -42,7 +54,8 @@ class NotificationService {
     required GuardianModel guardian,
     required String method,
   }) async {
-    final message = formatEmergencyMessage(emergency: emergency, guardian: guardian);
+    final message =
+        await formatEmergencyMessage(emergency: emergency, guardian: guardian);
     final cleanPhone = guardian.mobileNumber.replaceAll(RegExp(r'[^0-9+]'), '');
 
     try {
@@ -54,7 +67,8 @@ class NotificationService {
           return await _sendSMS(cleanPhone, message);
 
         case 'email':
-          return await _sendEmail(guardian.email, "EMERGENCY SOS ALERT - SafeStep", message);
+          return await _sendEmail(
+              guardian.email, "EMERGENCY SOS ALERT - SafeStep", message);
 
         case 'share':
         default:
@@ -88,7 +102,8 @@ class NotificationService {
   Future<bool> _sendEmail(String email, String subject, String body) async {
     final encodedSubject = Uri.encodeComponent(subject);
     final encodedBody = Uri.encodeComponent(body);
-    final mailUri = Uri.parse("mailto:$email?subject=$encodedSubject&body=$encodedBody");
+    final mailUri =
+        Uri.parse("mailto:$email?subject=$encodedSubject&body=$encodedBody");
     if (await canLaunchUrl(mailUri)) {
       return await launchUrl(mailUri, mode: LaunchMode.externalApplication);
     }
@@ -96,7 +111,8 @@ class NotificationService {
   }
 
   Future<bool> _sendShareSheet(String text) async {
-    final result = await Share.share(text, subject: "EMERGENCY SOS ALERT - SafeStep");
+    final result =
+        await Share.share(text, subject: "EMERGENCY SOS ALERT - SafeStep");
     return result.status == ShareResultStatus.success;
   }
 }

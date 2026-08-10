@@ -10,7 +10,7 @@ class CameraService {
   CameraController? _controller;
 
   /// Record video with audio for specified duration in seconds
-  Future<File?> recordVideo({int durationSeconds = 13}) async {
+  Future<File?> recordVideo({int durationSeconds = 10}) async {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
@@ -25,7 +25,7 @@ class CameraService {
 
       _controller = CameraController(
         selectedCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.medium, // Keeps file size lightweight (~2.5MB)
         enableAudio: true,
       );
 
@@ -36,7 +36,10 @@ class CameraService {
 
       await Future.delayed(Duration(seconds: durationSeconds));
 
+      // Stop recording and safely extract file path
       final XFile videoXFile = await _controller!.stopVideoRecording();
+
+      // Dispose controller immediately to free up hardware resources
       await _controller!.dispose();
       _controller = null;
 
