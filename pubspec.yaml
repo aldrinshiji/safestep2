@@ -30,6 +30,7 @@ dependencies:
   connectivity_plus: ^6.1.1
   device_info_plus: ^11.1.1
   flutter_riverpod: ^2.6.1
+  video_compress: ^3.1.2
 
 dev_dependencies:
   flutter_test:
@@ -38,4 +39,4 @@ dev_dependencies:
 
 
 flutter:
-  uses-material-design: true
+  uses-material-design: true

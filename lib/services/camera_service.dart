@@ -25,7 +25,7 @@ class CameraService {
 
       _controller = CameraController(
         selectedCamera,
-        ResolutionPreset.high,
+        ResolutionPreset.medium,
         enableAudio: true,
       );
 

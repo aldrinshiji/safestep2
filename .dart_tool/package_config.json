@@ -770,6 +770,12 @@
       "languageVersion": "2.14"
     },
     {
+      "name": "video_compress",
+      "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/video_compress-3.1.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "video_player",
       "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/video_player-2.9.5",
       "packageUri": "lib/",
@@ -860,7 +866,7 @@
       "languageVersion": "3.5"
     }
   ],
-  "generated": "2026-08-08T09:07:41.893019Z",
+  "generated": "2026-08-10T13:20:22.303617Z",
   "generator": "pub",
   "generatorVersion": "3.5.3",
   "flutterRoot": "file:///D:/src/flutter",

@@ -9,6 +9,7 @@ import '../models/emergency_model.dart';
 import '../models/guardian_model.dart';
 import 'notification_service.dart';
 import 'supabase_service.dart';
+import 'package:video_compress/video_compress.dart';
 
 class OfflineSyncService {
   static final OfflineSyncService _instance = OfflineSyncService._internal();
@@ -81,19 +82,42 @@ class OfflineSyncService {
           final guardian = GuardianModel.fromJson(map['guardian']);
 
           // 1. Upload video if local video exists and hasn't been uploaded yet
+          // 1. Upload video if local video exists and hasn't been uploaded yet
           if (emergency.localVideoPath != null &&
               (emergency.publicVideoUrl == null ||
                   emergency.publicVideoUrl!.isEmpty)) {
             debugPrint(
                 "OfflineSyncService: Found local video path: ${emergency.localVideoPath}");
-            final file = File(emergency.localVideoPath!);
+            final originalFile = File(emergency.localVideoPath!);
 
-            if (await file.exists()) {
+            if (await originalFile.exists()) {
               debugPrint(
-                  "OfflineSyncService: Local video file exists. Starting upload...");
+                  "OfflineSyncService: Compressing video before upload...");
+
+              File fileToUpload = originalFile;
+              try {
+                final mediaInfo = await VideoCompress.compressVideo(
+                  originalFile.path,
+                  quality: VideoQuality
+                      .LowQuality, // Compresses to a lightweight format
+                  deleteOrigin: false,
+                  includeAudio: true,
+                );
+                if (mediaInfo?.file != null) {
+                  fileToUpload = mediaInfo!.file!;
+                  debugPrint(
+                      "OfflineSyncService: Compression successful! New size: ${await fileToUpload.length()} bytes");
+                }
+              } catch (e) {
+                debugPrint(
+                    "OfflineSyncService: Compression failed, using original file: $e");
+                VideoCompress.cancelCompression();
+              }
+
+              debugPrint("OfflineSyncService: Starting upload to Supabase...");
               final fileName = "sos_${emergency.id}.mp4";
-              final publicUrl =
-                  await _supabaseService.uploadEmergencyVideo(file, fileName);
+              final publicUrl = await _supabaseService.uploadEmergencyVideo(
+                  fileToUpload, fileName);
 
               if (publicUrl != null) {
                 debugPrint(
@@ -110,7 +134,6 @@ class OfflineSyncService {
                   "OfflineSyncService Error: Local video file does NOT exist at path.");
             }
           }
-
           // 2. Save record to Supabase DB
           final dbSuccess = await _supabaseService.saveEmergencyRecord(
             emergency: emergency,
