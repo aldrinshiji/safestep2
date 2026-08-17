@@ -227,12 +227,13 @@ class _HomeScreenState extends State<HomeScreen> {
     await _repository.saveEmergencyLog(emergency);
 
     // 7. Save to Supabase DB or Queue Offline
+    bool alertDispatched = false;
     if (isOnline) {
       await _supabaseService.saveEmergencyRecord(
         emergency: emergency,
         guardian: _guardian,
       );
-      await _notificationService.sendGuardianNotification(
+      alertDispatched = await _notificationService.sendGuardianNotification(
         emergency: emergency,
         guardian: _guardian,
         method: _settings.alertMethod,
@@ -243,11 +244,11 @@ class _HomeScreenState extends State<HomeScreen> {
         emergency: emergency,
         guardian: _guardian,
       );
-      // Attempt local share via SMS / Share Sheet
-      await _notificationService.sendGuardianNotification(
+      // Attempt local SMS or share sheet fallback
+      alertDispatched = await _notificationService.sendGuardianNotification(
         emergency: emergency,
         guardian: _guardian,
-        method: 'share',
+        method: _settings.alertMethod == 'sms' ? 'sms' : 'share',
       );
     }
 
@@ -258,10 +259,31 @@ class _HomeScreenState extends State<HomeScreen> {
       _isSafe = true;
     });
 
-    _showSOSDispatchedDialog(emergency);
+    _showSOSDispatchedDialog(emergency, alertDispatched);
   }
 
-  void _showSOSDispatchedDialog(EmergencyModel emergency) {
+  void _showSOSDispatchedDialog(EmergencyModel emergency, bool alertDispatched) {
+    String methodDetail = "";
+    switch (_settings.alertMethod.toLowerCase()) {
+      case 'sms':
+        methodDetail = alertDispatched
+            ? "Automatic SMS sent silently to guardian!"
+            : "SMS app opened with pre-filled alert.";
+        break;
+      case 'email':
+        methodDetail = alertDispatched
+            ? "Automatic Background Email dispatched to guardian!"
+            : "Mail app opened with pre-filled alert.";
+        break;
+      case 'whatsapp':
+        methodDetail = "WhatsApp launched with pre-filled emergency message (1-Tap Send).";
+        break;
+      case 'share':
+      default:
+        methodDetail = "Native share sheet opened for dispatch.";
+        break;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -269,7 +291,7 @@ class _HomeScreenState extends State<HomeScreen> {
         icon: const Icon(Icons.check_circle_rounded, size: 50, color: Colors.green),
         title: const Text("EMERGENCY DISPATCHED"),
         content: Text(
-          "Evidence collected & saved to Gallery.\nGuardian: ${_guardian.name} (${_guardian.mobileNumber})\nStatus: ${_internetReady ? 'Uploaded & Alert Sent' : 'Queued Offline'}",
+          "Evidence recorded & saved to Gallery.\nGuardian: ${_guardian.name} (${_guardian.mobileNumber})\n\nAlert Status: $methodDetail",
         ),
         actions: [
           TextButton(

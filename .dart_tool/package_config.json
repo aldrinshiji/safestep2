@@ -44,6 +44,12 @@
       "languageVersion": "2.18"
     },
     {
+      "name": "background_sms",
+      "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/background_sms-0.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "battery_plus",
       "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/battery_plus-6.2.3",
       "packageUri": "lib/",
@@ -344,6 +350,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "intl",
+      "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
       "name": "js",
       "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/js-0.7.1",
       "packageUri": "lib/",
@@ -390,6 +402,12 @@
       "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/logging-1.3.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "mailer",
+      "rootUri": "file:///C:/Users/Aldrin/AppData/Local/Pub/Cache/hosted/pub.dev/mailer-6.6.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
     },
     {
       "name": "matcher",
@@ -866,7 +884,7 @@
       "languageVersion": "3.5"
     }
   ],
-  "generated": "2026-08-10T13:20:22.303617Z",
+  "generated": "2026-08-17T16:46:13.177953Z",
   "generator": "pub",
   "generatorVersion": "3.5.3",
   "flutterRoot": "file:///D:/src/flutter",

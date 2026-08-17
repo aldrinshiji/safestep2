@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -23,18 +24,30 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
     <queries>
+        <!-- WhatsApp Package Query -->
         <package android:name="com.whatsapp" />
+        
+        <!-- Generic HTTPS Intent for WhatsApp Web / Universal Links -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
+        
+        <!-- Direct Email Intent -->
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="mailto" />
         </intent>
+        
+        <!-- Direct SMS Intent -->
         <intent>
             <action android:name="android.intent.action.SENDTO" />
             <data android:scheme="smsto" />
+        </intent>
+        
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="sms" />
         </intent>
     </queries>
 
@@ -66,4 +79,4 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-</manifest>
+</manifest>

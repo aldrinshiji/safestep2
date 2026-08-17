@@ -21,6 +21,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   Future<void> _checkPermissions() async {
     final permissions = [
+      Permission.sms,
       Permission.camera,
       Permission.microphone,
       Permission.location,
@@ -51,6 +52,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   Future<void> _requestAllPermissions() async {
     Map<Permission, PermissionStatus> statuses = await [
+      Permission.sms,
       Permission.camera,
       Permission.microphone,
       Permission.location,
@@ -84,6 +86,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     style: TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   const SizedBox(height: 20),
+                  _buildPermissionTile(
+                    "Automatic SMS Dispatch",
+                    "Required for sending direct background emergency SMS without tapping send",
+                    Icons.textsms_rounded,
+                    Permission.sms,
+                  ),
                   _buildPermissionTile(
                     "Camera Access",
                     "Required for emergency video recording",

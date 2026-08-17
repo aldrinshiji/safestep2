@@ -285,15 +285,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                               items: const [
                                 DropdownMenuItem(
+                                    value: 'sms',
+                                    child: Text('Automatic SMS (No Tap Required)')),
+                                DropdownMenuItem(
+                                    value: 'email',
+                                    child: Text('Email Alert (Pre-filled 1-Tap)')),
+                                DropdownMenuItem(
                                     value: 'whatsapp',
-                                    child: Text('WhatsApp Direct Alert')),
-                                DropdownMenuItem(
-                                    value: 'sms', child: Text('SMS Message')),
-                                DropdownMenuItem(
-                                    value: 'email', child: Text('Email Alert')),
+                                    child: Text('WhatsApp Direct (Pre-filled 1-Tap)')),
                                 DropdownMenuItem(
                                     value: 'share',
-                                    child: Text('Android Native Share Sheet')),
+                                    child: Text('Native System Share Sheet')),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
