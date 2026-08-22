@@ -30,7 +30,8 @@ class SafeStepApp extends StatefulWidget {
 }
 
 class _SafeStepAppState extends State<SafeStepApp> {
-  ThemeMode _themeMode = ThemeMode.system;
+  String _themePreset = 'cyber_dark';
+  bool _isDark = true;
 
   @override
   void initState() {
@@ -40,9 +41,9 @@ class _SafeStepAppState extends State<SafeStepApp> {
 
   Future<void> _loadTheme() async {
     final prefs = await SharedPreferences.getInstance();
-    final isDark = prefs.getBool(AppConstants.keyDarkMode) ?? false;
     setState(() {
-      _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
+      _isDark = prefs.getBool(AppConstants.keyDarkMode) ?? true;
+      _themePreset = prefs.getString(AppConstants.keyThemePreset) ?? 'cyber_dark';
     });
   }
 
@@ -51,10 +52,10 @@ class _SafeStepAppState extends State<SafeStepApp> {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: _themeMode,
-      home: const HomeScreen(),
+      theme: AppTheme.getThemeByPreset(_themePreset, isDark: false),
+      darkTheme: AppTheme.getThemeByPreset(_themePreset, isDark: true),
+      themeMode: _isDark ? ThemeMode.dark : ThemeMode.light,
+      home: HomeScreen(onThemeChanged: _loadTheme),
     );
   }
 }

@@ -10,8 +10,13 @@ import 'permissions_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final VoidCallback? onSettingsChanged;
+  final String? initialSection;
 
-  const SettingsScreen({super.key, this.onSettingsChanged});
+  const SettingsScreen({
+    super.key,
+    this.onSettingsChanged,
+    this.initialSection,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -21,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final EmergencyRepository _repository = EmergencyRepository();
   final SupabaseService _supabaseService = SupabaseService();
+  final ScrollController _scrollController = ScrollController();
 
   // User Details Controllers
   final TextEditingController _myNameController = TextEditingController();
@@ -29,10 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Guardian Details Controllers
   final TextEditingController _guardianNameController = TextEditingController();
-  final TextEditingController _guardianEmailController =
-      TextEditingController();
-  final TextEditingController _guardianMobileController =
-      TextEditingController();
+  final TextEditingController _guardianEmailController = TextEditingController();
+  final TextEditingController _guardianMobileController = TextEditingController();
 
   SettingsModel _settings = const SettingsModel();
   bool _isLoading = true;
@@ -64,13 +68,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
         enableVolume: prefs.getBool(AppConstants.keyEnableVolume) ?? true,
         autoUpload: prefs.getBool(AppConstants.keyAutoUpload) ?? true,
         saveToGallery: prefs.getBool(AppConstants.keySaveToGallery) ?? true,
-        darkMode: prefs.getBool(AppConstants.keyDarkMode) ?? false,
+        darkMode: prefs.getBool(AppConstants.keyDarkMode) ?? true,
+        themePreset: prefs.getString(AppConstants.keyThemePreset) ?? 'cyber_dark',
         language: prefs.getString(AppConstants.keyLanguage) ?? 'English',
         enableCountdown: prefs.getBool(AppConstants.keyEnableCountdown) ?? true,
         alertMethod: prefs.getString(AppConstants.keyAlertMethod) ?? 'whatsapp',
       );
       _isLoading = false;
     });
+
+    if (widget.initialSection == 'guardian') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollController.animateTo(
+          180,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      });
+    }
   }
 
   Future<void> _saveAllSettings() async {
@@ -100,27 +115,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await prefs.setBool(AppConstants.keyAutoUpload, _settings.autoUpload);
     await prefs.setBool(AppConstants.keySaveToGallery, _settings.saveToGallery);
     await prefs.setBool(AppConstants.keyDarkMode, _settings.darkMode);
+    await prefs.setString(AppConstants.keyThemePreset, _settings.themePreset);
     await prefs.setString(AppConstants.keyLanguage, _settings.language);
-    await prefs.setBool(
-        AppConstants.keyEnableCountdown, _settings.enableCountdown);
+    await prefs.setBool(AppConstants.keyEnableCountdown, _settings.enableCountdown);
     await prefs.setString(AppConstants.keyAlertMethod, _settings.alertMethod);
 
     widget.onSettingsChanged?.call();
 
     if (!mounted) return;
+    final colors = AppTheme.getColors(_settings.themePreset);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Profile & Emergency Settings saved successfully!"),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text("Profile & Theme Settings saved successfully!"),
+        backgroundColor: colors.safeGreen,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(_settings.themePreset);
+
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
-        title: const Text("Settings"),
+        title: Text(widget.initialSection == 'guardian' ? "Guardian Setup" : "Settings"),
         actions: [
           IconButton(
             icon: const Icon(Icons.security_rounded),
@@ -128,8 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (context) => const PermissionsScreen()),
+                MaterialPageRoute(builder: (context) => const PermissionsScreen()),
               );
             },
           ),
@@ -138,54 +156,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(20),
               child: Form(
                 key: _formKey,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- MY DETAILS SECTION ---
-                    _buildSectionTitle(
-                        "My Personal Details", Icons.badge_rounded),
+                    // --- FEATURED THEME SELECTION ---
+                    _buildSectionTitle("Featured Theme Preset", Icons.palette_outlined, colors),
                     const SizedBox(height: 12),
                     Card(
+                      color: colors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: colors.cardBorder),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            DropdownButtonFormField<String>(
+                              value: _settings.themePreset,
+                              dropdownColor: colors.cardBg,
+                              decoration: InputDecoration(
+                                labelText: "Select Theme Preset",
+                                prefixIcon: Icon(Icons.color_lens_outlined, color: colors.primaryRed),
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'cyber_dark',
+                                  child: Text('Cyber Dark (Default Screenshot UI)'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'midnight_blue',
+                                  child: Text('Midnight Sapphire'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'sunset_crimson',
+                                  child: Text('Sunset Crimson'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'light_modern',
+                                  child: Text('Light Modern'),
+                                ),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _settings = _settings.copyWith(
+                                      themePreset: val,
+                                      darkMode: val != 'light_modern',
+                                    );
+                                  });
+                                  _saveAllSettings();
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // --- MY DETAILS SECTION ---
+                    _buildSectionTitle("My Personal Details", Icons.badge_outlined, colors),
+                    const SizedBox(height: 12),
+                    Card(
+                      color: colors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: colors.cardBorder),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           children: [
                             TextFormField(
                               controller: _myNameController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "My Full Name",
-                                prefixIcon: Icon(Icons.person_rounded),
+                                prefixIcon: Icon(Icons.person_rounded, color: colors.primaryRed),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter your name"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter your name" : null,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _myEmailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "My Email",
-                                prefixIcon: Icon(Icons.email_rounded),
+                                prefixIcon: Icon(Icons.email_rounded, color: colors.primaryRed),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter your email"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter your email" : null,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _myMobileController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "My Mobile Number",
-                                prefixIcon: Icon(Icons.phone_rounded),
+                                prefixIcon: Icon(Icons.phone_rounded, color: colors.primaryRed),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter your mobile number"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter your mobile number" : null,
                             ),
                           ],
                         ),
@@ -194,47 +267,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 24),
 
                     // --- GUARDIAN INFORMATION SECTION ---
-                    _buildSectionTitle("Guardian Information",
-                        Icons.supervisor_account_rounded),
+                    _buildSectionTitle("Guardian Information", Icons.supervisor_account_rounded, colors),
                     const SizedBox(height: 12),
                     Card(
+                      color: colors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: colors.cardBorder),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           children: [
                             TextFormField(
                               controller: _guardianNameController,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "Guardian Full Name",
-                                prefixIcon: Icon(Icons.person_outline_rounded),
+                                prefixIcon: Icon(Icons.person_outline_rounded, color: colors.accentPurple),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter guardian name"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter guardian name" : null,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _guardianEmailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "Guardian Email",
-                                prefixIcon: Icon(Icons.email_outlined),
+                                prefixIcon: Icon(Icons.email_outlined, color: colors.accentPurple),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter guardian email"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter guardian email" : null,
                             ),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _guardianMobileController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 labelText: "Guardian Mobile Number",
-                                prefixIcon: Icon(Icons.phone_outlined),
+                                prefixIcon: Icon(Icons.phone_outlined, color: colors.accentPurple),
                               ),
-                              validator: (val) => val == null || val.isEmpty
-                                  ? "Please enter guardian mobile number"
-                                  : null,
+                              validator: (val) => val == null || val.isEmpty ? "Please enter guardian mobile number" : null,
                             ),
                           ],
                         ),
@@ -243,35 +314,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 24),
 
                     // --- EMERGENCY SETTINGS SECTION ---
-                    _buildSectionTitle(
-                        "Emergency Settings", Icons.bolt_rounded),
+                    _buildSectionTitle("Emergency Settings", Icons.bolt_rounded, colors),
                     const SizedBox(height: 12),
                     Card(
+                      color: colors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: colors.cardBorder),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           children: [
                             DropdownButtonFormField<int>(
                               value: _settings.videoDuration,
-                              decoration: const InputDecoration(
+                              dropdownColor: colors.cardBg,
+                              decoration: InputDecoration(
                                 labelText: "Evidence Video Duration",
-                                prefixIcon: Icon(Icons.videocam_outlined),
+                                prefixIcon: Icon(Icons.videocam_outlined, color: colors.primaryRed),
                               ),
                               items: const [
-                                DropdownMenuItem(
-                                    value: 10, child: Text("10 Seconds")),
-                                DropdownMenuItem(
-                                    value: 20, child: Text("20 Seconds")),
-                                DropdownMenuItem(
-                                    value: 30, child: Text("30 Seconds")),
-                                DropdownMenuItem(
-                                    value: 60, child: Text("60 Seconds")),
+                                DropdownMenuItem(value: 10, child: Text("10 Seconds")),
+                                DropdownMenuItem(value: 20, child: Text("20 Seconds")),
+                                DropdownMenuItem(value: 30, child: Text("30 Seconds")),
+                                DropdownMenuItem(value: 60, child: Text("60 Seconds")),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
                                   setState(() {
-                                    _settings =
-                                        _settings.copyWith(videoDuration: val);
+                                    _settings = _settings.copyWith(videoDuration: val);
                                   });
                                 }
                               },
@@ -279,79 +350,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
                               value: _settings.alertMethod,
-                              decoration: const InputDecoration(
+                              dropdownColor: colors.cardBg,
+                              decoration: InputDecoration(
                                 labelText: "Preferred Alert Dispatch Method",
-                                prefixIcon: Icon(Icons.send_rounded),
+                                prefixIcon: Icon(Icons.send_rounded, color: colors.accentCyan),
                               ),
                               items: const [
-                                DropdownMenuItem(
-                                    value: 'sms',
-                                    child: Text('Automatic SMS (No Tap Required)')),
-                                DropdownMenuItem(
-                                    value: 'email',
-                                    child: Text('Email Alert (Pre-filled 1-Tap)')),
-                                DropdownMenuItem(
-                                    value: 'whatsapp',
-                                    child: Text('WhatsApp Direct (Pre-filled 1-Tap)')),
-                                DropdownMenuItem(
-                                    value: 'share',
-                                    child: Text('Native System Share Sheet')),
+                                DropdownMenuItem(value: 'sms', child: Text('Automatic SMS (No Tap Required)')),
+                                DropdownMenuItem(value: 'email', child: Text('Email Alert (Pre-filled 1-Tap)')),
+                                DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp Direct (Pre-filled 1-Tap)')),
+                                DropdownMenuItem(value: 'share', child: Text('Native System Share Sheet')),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
                                   setState(() {
-                                    _settings =
-                                        _settings.copyWith(alertMethod: val);
+                                    _settings = _settings.copyWith(alertMethod: val);
                                   });
                                 }
                               },
                             ),
                             const Divider(height: 24),
                             SwitchListTile(
+                              activeColor: colors.primaryRed,
                               title: const Text("Enable Shake Detection"),
-                              subtitle:
-                                  const Text("Trigger SOS by shaking phone"),
+                              subtitle: const Text("Trigger SOS by shaking phone"),
                               value: _settings.enableShake,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(enableShake: val)),
+                              onChanged: (val) => setState(() => _settings = _settings.copyWith(enableShake: val)),
                             ),
                             SwitchListTile(
+                              activeColor: colors.primaryRed,
                               title: const Text("Volume Down Button Trigger"),
-                              subtitle:
-                                  const Text("Hold Volume Down for 3 seconds"),
+                              subtitle: const Text("Hold Volume Down for 3 seconds"),
                               value: _settings.enableVolume,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(enableVolume: val)),
+                              onChanged: (val) => setState(() => _settings = _settings.copyWith(enableVolume: val)),
                             ),
                             SwitchListTile(
+                              activeColor: colors.primaryRed,
                               title: const Text("Emergency Countdown"),
-                              subtitle:
-                                  const Text("3-second cancelable countdown"),
+                              subtitle: const Text("3-second cancelable countdown"),
                               value: _settings.enableCountdown,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(enableCountdown: val)),
+                              onChanged: (val) => setState(() => _settings = _settings.copyWith(enableCountdown: val)),
                             ),
                             SwitchListTile(
+                              activeColor: colors.primaryRed,
                               title: const Text("Auto Upload to Cloud"),
-                              subtitle: const Text(
-                                  "Upload evidence to Supabase Storage"),
+                              subtitle: const Text("Upload evidence to Supabase Storage"),
                               value: _settings.autoUpload,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(autoUpload: val)),
+                              onChanged: (val) => setState(() => _settings = _settings.copyWith(autoUpload: val)),
                             ),
                             SwitchListTile(
+                              activeColor: colors.primaryRed,
                               title: const Text("Save to Device Gallery"),
-                              subtitle: const Text(
-                                  "Save evidence video locally in Gallery"),
+                              subtitle: const Text("Save evidence video locally in Gallery"),
                               value: _settings.saveToGallery,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(saveToGallery: val)),
-                            ),
-                            SwitchListTile(
-                              title: const Text("Dark Theme Mode"),
-                              value: _settings.darkMode,
-                              onChanged: (val) => setState(() => _settings =
-                                  _settings.copyWith(darkMode: val)),
+                              onChanged: (val) => setState(() => _settings = _settings.copyWith(saveToGallery: val)),
                             ),
                           ],
                         ),
@@ -359,20 +411,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 24),
                     ListTile(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)),
-                      tileColor: AppTheme.primaryOrange.withOpacity(0.15),
-                      leading: const Icon(Icons.security_rounded,
-                          color: AppTheme.primaryOrange),
-                      title: const Text("Permissions Management",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      tileColor: colors.accentCyan.withOpacity(0.12),
+                      leading: Icon(Icons.security_rounded, color: colors.accentCyan),
+                      title: const Text("Permissions Management", style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: const Text("Check & grant system permissions"),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                              builder: (context) => const PermissionsScreen()),
+                          MaterialPageRoute(builder: (context) => const PermissionsScreen()),
                         );
                       },
                     ),
@@ -381,18 +429,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryRed,
+                          backgroundColor: colors.primaryRed,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         onPressed: _saveAllSettings,
-                        icon:
-                            const Icon(Icons.save_rounded, color: Colors.white),
+                        icon: const Icon(Icons.save_rounded, color: Colors.white),
                         label: const Text(
                           "SAVE ALL SETTINGS",
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold),
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
@@ -403,14 +447,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title, IconData icon) {
+  Widget _buildSectionTitle(String title, IconData icon, SafeStepThemeColors colors) {
     return Row(
       children: [
-        Icon(icon, color: AppTheme.primaryRed),
+        Icon(icon, color: colors.primaryRed),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
         ),
       ],
     );

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
+import 'footprint_logo.dart';
 
 class StatusCard extends StatelessWidget {
   final bool isSafe;
@@ -8,6 +9,7 @@ class StatusCard extends StatelessWidget {
   final bool micReady;
   final bool internetReady;
   final VoidCallback? onTapPermissions;
+  final String themePreset;
 
   const StatusCard({
     super.key,
@@ -17,115 +19,225 @@ class StatusCard extends StatelessWidget {
     required this.micReady,
     required this.internetReady,
     this.onTapPermissions,
+    this.themePreset = 'cyber_dark',
   });
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(themePreset);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isSafe
-        ? (isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9))
-        : (isDark ? const Color(0xFF3E1F1F) : const Color(0xFFFFEBEE));
 
-    final borderColor = isSafe ? Colors.green : AppTheme.primaryRed;
+    return Column(
+      children: [
+        // --- 1. Top Header & Safety Status Pill Row ---
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // SafeStep Footprint Logo & Tagline
+            Expanded(
+              child: Row(
+                children: [
+                  FootprintLogo(
+                    size: 26,
+                    color: colors.textPrimary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: "Safe",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.textPrimary,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              TextSpan(
+                                text: "Step",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.primaryRed,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          "YOUR SAFETY • OUR PRIORITY",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
+                            color: colors.textSecondary,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
 
-    return GestureDetector(
-      onTap: onTapPermissions,
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: borderColor.withOpacity(0.5), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: borderColor.withOpacity(0.1),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+            // Top-Right Glowing "You are Safe" Status Pill (Responsive with FittedBox)
+            InkWell(
+              onTap: onTapPermissions,
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSafe
+                      ? colors.safeGreen.withOpacity(0.15)
+                      : colors.primaryRed.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: isSafe
+                        ? colors.safeGreen.withOpacity(0.5)
+                        : colors.primaryRed.withOpacity(0.6),
+                    width: 1.2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (isSafe ? colors.safeGreen : colors.primaryRed)
+                          .withOpacity(0.15),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isSafe ? colors.safeGreen : colors.primaryRed,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSafe ? colors.safeGreen : colors.primaryRed,
+                            blurRadius: 4,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isSafe ? "You are Safe" : "SOS Active",
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.bold,
+                        color: isSafe ? colors.safeGreen : colors.primaryRed,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        child: Column(
-          children: [
-            Row(
+
+        const SizedBox(height: 14),
+
+        // --- 2. Emergency Mode Ready Banner Card ---
+        InkWell(
+          onTap: onTapPermissions,
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [
+                        colors.primaryRed.withOpacity(0.22),
+                        colors.cardBg,
+                      ]
+                    : [
+                        colors.primaryRed.withOpacity(0.12),
+                        Colors.white,
+                      ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: colors.primaryRed.withOpacity(0.4),
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primaryRed.withOpacity(0.12),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
+                // Warning Triangle Tile
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: borderColor.withOpacity(0.15),
-                    shape: BoxShape.circle,
+                    color: colors.primaryRed.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: colors.primaryRed.withOpacity(0.5),
+                    ),
                   ),
                   child: Icon(
-                    isSafe
-                        ? Icons.shield_rounded
-                        : Icons.warning_amber_rounded,
-                    color: borderColor,
-                    size: 28,
+                    Icons.warning_amber_rounded,
+                    color: colors.primaryRed,
+                    size: 24,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        isSafe ? "System Protected" : "EMERGENCY ACTIVATED",
+                        isSafe ? "Emergency Mode Ready" : "EMERGENCY IN PROGRESS",
                         style: TextStyle(
-                          fontSize: 17,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: borderColor,
+                          color: colors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         isSafe
-                            ? "Shake device or press SOS to send alert"
-                            : "Capturing evidence & notifying guardian...",
+                            ? "Tap SOS or use shake/volume button to activate"
+                            : "Capturing evidence & alerting guardian...",
                         style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white70 : Colors.black87,
+                          fontSize: 11,
+                          color: colors.textSecondary,
                         ),
                       ),
                     ],
                   ),
                 ),
-                if (onTapPermissions != null)
-                  Icon(
-                    Icons.chevron_right_rounded,
-                    color: isDark ? Colors.white54 : Colors.black45,
-                  ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: colors.primaryRed.withOpacity(0.8),
+                  size: 20,
+                ),
               ],
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12.0),
-              child: Divider(height: 1),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildBadge("GPS", gpsReady, Icons.location_on_rounded),
-                _buildBadge("Camera", cameraReady, Icons.videocam_rounded),
-                _buildBadge("Mic", micReady, Icons.mic_rounded),
-                _buildBadge("Internet", internetReady, Icons.wifi_rounded),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBadge(String label, bool active, IconData icon) {
-    final color = active ? Colors.green : AppTheme.primaryOrange;
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: color,
           ),
         ),
       ],

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 import '../models/emergency_model.dart';
 import '../repositories/emergency_repository.dart';
@@ -19,31 +21,36 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   List<EmergencyModel> _history = [];
   bool _isLoading = true;
+  String _themePreset = 'cyber_dark';
 
   @override
   void initState() {
     super.initState();
-    _loadHistory();
+    _loadData();
   }
 
-  Future<void> _loadHistory() async {
+  Future<void> _loadData() async {
     final list = await _repository.loadHistory();
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
       _history = list;
+      _themePreset = prefs.getString(AppConstants.keyThemePreset) ?? 'cyber_dark';
       _isLoading = false;
     });
   }
 
   Future<void> _deleteLog(String id) async {
     await _repository.deleteEmergencyLog(id);
-    _loadHistory();
+    _loadData();
   }
 
   void _showDetailModal(EmergencyModel item) {
+    final colors = AppTheme.getColors(_themePreset);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: colors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -65,7 +72,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.4),
+                        color: colors.textSecondary.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -76,9 +83,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       Text(
                         "Emergency Details",
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.textPrimary,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_forever_rounded, color: Colors.red),
@@ -98,21 +107,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  _buildDetailRow("Emergency ID", item.id),
-                  _buildDetailRow("Time", item.timestamp.toString().substring(0, 19)),
-                  _buildDetailRow("Location", item.address),
-                  _buildDetailRow("Coordinates", "${item.latitude}, ${item.longitude}"),
-                  _buildDetailRow("Device", item.deviceModel),
-                  _buildDetailRow("Battery Level", "${item.batteryPercentage}%"),
-                  _buildDetailRow("Cloud Upload", item.uploadStatus.toUpperCase()),
-                  _buildDetailRow("Guardian Alert", item.guardianStatus.toUpperCase()),
+                  _buildDetailRow("Emergency ID", item.id, colors),
+                  _buildDetailRow("Time", item.timestamp.toString().substring(0, 19), colors),
+                  _buildDetailRow("Location", item.address, colors),
+                  _buildDetailRow("Coordinates", "${item.latitude}, ${item.longitude}", colors),
+                  _buildDetailRow("Device", item.deviceModel, colors),
+                  _buildDetailRow("Battery Level", "${item.batteryPercentage}%", colors),
+                  _buildDetailRow("Cloud Upload", item.uploadStatus.toUpperCase(), colors),
+                  _buildDetailRow("Guardian Alert", item.guardianStatus.toUpperCase(), colors),
                   const SizedBox(height: 24),
                   Row(
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryOrange,
+                            backgroundColor: colors.accentCyan,
                           ),
                           onPressed: () async {
                             final mapsUri = Uri.parse(item.googleMapsUrl);
@@ -120,15 +129,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
                             }
                           },
-                          icon: const Icon(Icons.map_rounded, color: Colors.white),
-                          label: const Text("OPEN MAPS", style: TextStyle(color: Colors.white)),
+                          icon: const Icon(Icons.map_rounded, color: Colors.black),
+                          label: const Text("OPEN MAPS", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryRed,
+                            backgroundColor: colors.primaryRed,
                           ),
                           onPressed: () async {
                             final guardian = await _repository.loadGuardian();
@@ -139,7 +148,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             );
                           },
                           icon: const Icon(Icons.share_rounded, color: Colors.white),
-                          label: const Text("SHARE AGAIN", style: TextStyle(color: Colors.white)),
+                          label: const Text("SHARE AGAIN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],
@@ -153,7 +162,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(String label, String value, SafeStepThemeColors colors) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -161,10 +170,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+            child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: colors.textSecondary)),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+            child: Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: colors.textPrimary)),
           ),
         ],
       ),
@@ -173,7 +182,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(_themePreset);
+
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text("Emergency History"),
       ),
@@ -184,11 +196,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.history_rounded, size: 80, color: Colors.grey.withOpacity(0.5)),
+                      Icon(Icons.history_rounded, size: 80, color: colors.textSecondary.withOpacity(0.5)),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         "No emergency logs recorded",
-                        style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 16, color: colors.textSecondary, fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
@@ -199,24 +211,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   itemBuilder: (context, index) {
                     final item = _history[index];
                     return Card(
+                      color: colors.cardBg,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(color: colors.cardBorder),
+                      ),
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         onTap: () => _showDetailModal(item),
                         leading: CircleAvatar(
-                          backgroundColor: AppTheme.primaryRed.withOpacity(0.15),
-                          child: const Icon(Icons.videocam_rounded, color: AppTheme.primaryRed),
+                          backgroundColor: colors.primaryRed.withOpacity(0.15),
+                          child: Icon(Icons.videocam_rounded, color: colors.primaryRed),
                         ),
                         title: Text(
                           item.address,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: colors.textPrimary),
                         ),
                         subtitle: Text(
                           "${item.timestamp.toString().substring(0, 16)} • ${item.uploadStatus.toUpperCase()}",
-                          style: const TextStyle(fontSize: 12),
+                          style: TextStyle(fontSize: 12, color: colors.textSecondary),
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded),
+                        trailing: Icon(Icons.chevron_right_rounded, color: colors.textSecondary),
                       ),
                     );
                   },

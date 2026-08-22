@@ -5,11 +5,13 @@ import '../core/theme/app_theme.dart';
 class EmergencyCountdownDialog extends StatefulWidget {
   final VoidCallback onCountdownComplete;
   final VoidCallback onCancel;
+  final String themePreset;
 
   const EmergencyCountdownDialog({
     super.key,
     required this.onCountdownComplete,
     required this.onCancel,
+    this.themePreset = 'cyber_dark',
   });
 
   @override
@@ -49,34 +51,55 @@ class _EmergencyCountdownDialogState extends State<EmergencyCountdownDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(widget.themePreset);
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-      backgroundColor: AppTheme.darkCard,
-      child: Padding(
+      backgroundColor: colors.cardBg,
+      child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        decoration: BoxDecoration(
+          color: colors.cardBg,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: colors.primaryRed.withOpacity(0.6), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: colors.primaryRed.withOpacity(0.3),
+              blurRadius: 30,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: AppTheme.primaryRed,
-              size: 60,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: colors.primaryRed.withOpacity(0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: colors.primaryRed,
+                size: 54,
+              ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               "EMERGENCY ACTIVATING",
               style: TextStyle(
-                color: Colors.white,
+                color: colors.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.0,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               "Evidence collection and guardian alert will trigger in:",
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 13),
+              style: TextStyle(color: colors.textSecondary, fontSize: 13),
             ),
             const SizedBox(height: 24),
             Container(
@@ -84,14 +107,21 @@ class _EmergencyCountdownDialogState extends State<EmergencyCountdownDialog> {
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppTheme.primaryRed.withOpacity(0.2),
-                border: Border.all(color: AppTheme.primaryRed, width: 3),
+                color: colors.primaryRed.withOpacity(0.15),
+                border: Border.all(color: colors.primaryRed, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: colors.primaryRed.withOpacity(0.4),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
               ),
               child: Center(
                 child: Text(
                   "$_secondsRemaining",
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.textPrimary,
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
                   ),
@@ -103,7 +133,7 @@ class _EmergencyCountdownDialogState extends State<EmergencyCountdownDialog> {
               width: double.infinity,
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.white38),
+                  side: BorderSide(color: colors.textSecondary.withOpacity(0.5)),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -114,10 +144,10 @@ class _EmergencyCountdownDialogState extends State<EmergencyCountdownDialog> {
                   Navigator.of(context).pop();
                   widget.onCancel();
                 },
-                child: const Text(
+                child: Text(
                   "CANCEL SOS",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: colors.textPrimary,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),

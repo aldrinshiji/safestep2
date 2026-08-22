@@ -1,10 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_theme.dart';
 
-class HelpScreen extends StatelessWidget {
+class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
+
+  @override
+  State<HelpScreen> createState() => _HelpScreenState();
+}
+
+class _HelpScreenState extends State<HelpScreen> {
+  String _themePreset = 'cyber_dark';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTheme();
+  }
+
+  Future<void> _loadTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _themePreset = prefs.getString(AppConstants.keyThemePreset) ?? 'cyber_dark';
+    });
+  }
 
   Future<void> _makeCall(String number) async {
     final uri = Uri.parse("tel:$number");
@@ -15,7 +36,10 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(_themePreset);
+
     return Scaffold(
+      backgroundColor: colors.background,
       appBar: AppBar(
         title: const Text("Safety & Help Center"),
       ),
@@ -24,11 +48,11 @@ class HelpScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeaderCard(),
+            _buildHeaderCard(colors),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               "Emergency Helpline Hotlines",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
             ),
             const SizedBox(height: 12),
             _buildHelplineTile(
@@ -36,38 +60,44 @@ class HelpScreen extends StatelessWidget {
               AppConstants.helplineWomen,
               "24x7 Dedicated Women Safety Helpline",
               Icons.phone_in_talk_rounded,
+              colors,
             ),
             _buildHelplineTile(
               "National Emergency Number",
               AppConstants.helplineNational,
               "All-in-one Emergency Services (Police, Ambulance, Fire)",
               Icons.local_police_rounded,
+              colors,
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               "SafeStep Emergency Triggers",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colors.textPrimary),
             ),
             const SizedBox(height: 12),
             _buildGuideTile(
               "1. Press SOS Button",
               "Tap the central SOS button on the home screen. A 3-second countdown will start before recording video & notifying your guardian.",
               Icons.touch_app_rounded,
+              colors,
             ),
             _buildGuideTile(
               "2. Shake Device",
               "In urgent situations where opening the app is difficult, vigorously shake your smartphone to instantly activate emergency recording.",
               Icons.vibration_rounded,
+              colors,
             ),
             _buildGuideTile(
               "3. Hold Volume Down Key",
               "Press and hold the Volume Down button for 3 seconds continuously to dispatch SOS silently.",
               Icons.volume_down_rounded,
+              colors,
             ),
             _buildGuideTile(
               "4. Automatic Evidence & Local Storage",
               "The app records video + audio, captures your precise GPS location, saves the file to your device Gallery, uploads to Supabase, and shares your live link.",
               Icons.cloud_upload_rounded,
+              colors,
             ),
           ],
         ),
@@ -75,16 +105,23 @@ class HelpScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildHeaderCard(SafeStepThemeColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryRed, AppTheme.primaryOrange],
+        gradient: LinearGradient(
+          colors: [colors.primaryRed, colors.accentPink],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: colors.primaryRed.withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: const Row(
         children: [
@@ -116,41 +153,51 @@ class HelpScreen extends StatelessWidget {
   }
 
   Widget _buildHelplineTile(
-      String title, String number, String subtitle, IconData icon) {
+      String title, String number, String subtitle, IconData icon, SafeStepThemeColors colors) {
     return Card(
+      color: colors.cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.cardBorder),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppTheme.primaryRed.withOpacity(0.15),
-          child: Icon(icon, color: AppTheme.primaryRed),
+          backgroundColor: colors.primaryRed.withOpacity(0.15),
+          child: Icon(icon, color: colors.primaryRed),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text("$number • $subtitle", style: const TextStyle(fontSize: 12)),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: colors.textPrimary)),
+        subtitle: Text("$number • $subtitle", style: TextStyle(fontSize: 12, color: colors.textSecondary)),
         trailing: IconButton(
-          icon: const Icon(Icons.call_rounded, color: Colors.green),
+          icon: Icon(Icons.call_rounded, color: colors.safeGreen),
           onPressed: () => _makeCall(number),
         ),
       ),
     );
   }
 
-  Widget _buildGuideTile(String title, String description, IconData icon) {
+  Widget _buildGuideTile(String title, String description, IconData icon, SafeStepThemeColors colors) {
     return Card(
+      color: colors.cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: colors.cardBorder),
+      ),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.primaryOrange, size: 28),
+            Icon(icon, color: colors.accentPurple, size: 28),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: colors.textPrimary)),
                   const SizedBox(height: 4),
-                  Text(description, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  Text(description, style: TextStyle(color: colors.textSecondary, fontSize: 13)),
                 ],
               ),
             ),

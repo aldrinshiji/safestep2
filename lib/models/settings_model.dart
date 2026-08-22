@@ -5,6 +5,7 @@ class SettingsModel {
   final bool autoUpload;
   final bool saveToGallery;
   final bool darkMode;
+  final String themePreset; // 'cyber_dark', 'midnight_blue', 'sunset_crimson', 'light_modern'
   final String language;
   final bool enableCountdown;
   final String alertMethod; // 'whatsapp', 'sms', 'email', 'share'
@@ -15,7 +16,8 @@ class SettingsModel {
     this.enableVolume = true,
     this.autoUpload = true,
     this.saveToGallery = true,
-    this.darkMode = false,
+    this.darkMode = true,
+    this.themePreset = 'cyber_dark',
     this.language = 'English',
     this.enableCountdown = true,
     this.alertMethod = 'whatsapp',
@@ -29,6 +31,7 @@ class SettingsModel {
       'auto_upload': autoUpload,
       'save_to_gallery': saveToGallery,
       'dark_mode': darkMode,
+      'theme_preset': themePreset,
       'language': language,
       'enable_countdown': enableCountdown,
       'alert_method': alertMethod,
@@ -42,7 +45,8 @@ class SettingsModel {
       enableVolume: json['enable_volume'] as bool? ?? true,
       autoUpload: json['auto_upload'] as bool? ?? true,
       saveToGallery: json['save_to_gallery'] as bool? ?? true,
-      darkMode: json['dark_mode'] as bool? ?? false,
+      darkMode: json['dark_mode'] as bool? ?? true,
+      themePreset: json['theme_preset'] as String? ?? 'cyber_dark',
       language: json['language'] as String? ?? 'English',
       enableCountdown: json['enable_countdown'] as bool? ?? true,
       alertMethod: json['alert_method'] as String? ?? 'whatsapp',
@@ -56,6 +60,7 @@ class SettingsModel {
     bool? autoUpload,
     bool? saveToGallery,
     bool? darkMode,
+    String? themePreset,
     String? language,
     bool? enableCountdown,
     String? alertMethod,
@@ -67,6 +72,7 @@ class SettingsModel {
       autoUpload: autoUpload ?? this.autoUpload,
       saveToGallery: saveToGallery ?? this.saveToGallery,
       darkMode: darkMode ?? this.darkMode,
+      themePreset: themePreset ?? this.themePreset,
       language: language ?? this.language,
       enableCountdown: enableCountdown ?? this.enableCountdown,
       alertMethod: alertMethod ?? this.alertMethod,

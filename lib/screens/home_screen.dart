@@ -20,15 +20,19 @@ import '../services/shake_service.dart';
 import '../services/supabase_service.dart';
 import '../services/volume_service.dart';
 import '../widgets/emergency_countdown_dialog.dart';
+import '../widgets/quick_action_cards.dart';
 import '../widgets/sos_button.dart';
 import '../widgets/status_card.dart';
+import '../widgets/trigger_instruction_bar.dart';
 import 'help_screen.dart';
 import 'history_screen.dart';
 import 'permissions_screen.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onThemeChanged;
+
+  const HomeScreen({super.key, this.onThemeChanged});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -45,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final OfflineSyncService _offlineSyncService = OfflineSyncService();
   final EmergencyRepository _repository = EmergencyRepository();
 
+  int _selectedTabIndex = 0;
   bool _isHandlingEmergency = false;
   bool _isSafe = true;
 
@@ -108,7 +113,8 @@ class _HomeScreenState extends State<HomeScreen> {
           enableVolume: prefs.getBool(AppConstants.keyEnableVolume) ?? true,
           autoUpload: prefs.getBool(AppConstants.keyAutoUpload) ?? true,
           saveToGallery: prefs.getBool(AppConstants.keySaveToGallery) ?? true,
-          darkMode: prefs.getBool(AppConstants.keyDarkMode) ?? false,
+          darkMode: prefs.getBool(AppConstants.keyDarkMode) ?? true,
+          themePreset: prefs.getString(AppConstants.keyThemePreset) ?? 'cyber_dark',
           language: prefs.getString(AppConstants.keyLanguage) ?? 'English',
           enableCountdown: prefs.getBool(AppConstants.keyEnableCountdown) ?? true,
           alertMethod: prefs.getString(AppConstants.keyAlertMethod) ?? 'whatsapp',
@@ -133,6 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context: context,
         barrierDismissible: false,
         builder: (context) => EmergencyCountdownDialog(
+          themePreset: _settings.themePreset,
           onCountdownComplete: _executeEmergencyProcess,
           onCancel: () {
             debugPrint("SOS Trigger Canceled by user.");
@@ -284,19 +291,29 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
     }
 
+    final colors = AppTheme.getColors(_settings.themePreset);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        icon: const Icon(Icons.check_circle_rounded, size: 50, color: Colors.green),
-        title: const Text("EMERGENCY DISPATCHED"),
+        backgroundColor: colors.cardBg,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        icon: const Icon(Icons.check_circle_rounded, size: 54, color: Colors.green),
+        title: Text(
+          "EMERGENCY DISPATCHED",
+          style: TextStyle(color: colors.textPrimary, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           "Evidence recorded & saved to Gallery.\nGuardian: ${_guardian.name} (${_guardian.mobileNumber})\n\nAlert Status: $methodDetail",
+          style: TextStyle(color: colors.textSecondary, fontSize: 13.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK", style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              "OK",
+              style: TextStyle(color: colors.primaryRed, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
           ),
         ],
       ),
@@ -305,6 +322,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = AppTheme.getColors(_settings.themePreset);
+
     return KeyboardListener(
       focusNode: FocusNode()..requestFocus(),
       onKeyEvent: (KeyEvent event) {
@@ -315,183 +334,176 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
+        backgroundColor: colors.background,
+        body: SafeArea(
+          child: IndexedStack(
+            index: _selectedTabIndex,
             children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryRed.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.shield_rounded,
-                  color: AppTheme.primaryRed,
-                  size: 22,
-                ),
+              _buildHomeDashboard(colors),
+              const HistoryScreen(),
+              SettingsScreen(
+                onSettingsChanged: () {
+                  _loadLocalSettings();
+                  widget.onThemeChanged?.call();
+                },
+                initialSection: 'guardian',
               ),
-              const SizedBox(width: 8),
-              const Text(
-                "SafeStep",
-                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              SettingsScreen(
+                onSettingsChanged: () {
+                  _loadLocalSettings();
+                  widget.onThemeChanged?.call();
+                },
               ),
+              const HelpScreen(),
             ],
           ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.help_outline_rounded),
-              tooltip: "Safety Help",
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HelpScreen()),
-                );
-              },
-            ),
-          ],
         ),
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-            child: Column(
-              children: [
-                // Top Status Card
-                StatusCard(
-                  isSafe: _isSafe,
-                  gpsReady: _gpsReady,
-                  cameraReady: _cameraReady,
-                  micReady: _micReady,
-                  internetReady: _internetReady,
-                  onTapPermissions: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PermissionsScreen()),
-                    );
-                    _checkSystemStatus();
-                  },
-                ),
-                const Spacer(),
-                // Center SOS Button
-                SOSButton(
-                  onTap: _onSOSPressed,
-                  isRecording: _isHandlingEmergency,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  _isHandlingEmergency
-                      ? "Recording Evidence & Dispatching SOS..."
-                      : "Shake Phone • Hold Vol Down 3s • Tap SOS",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: _isHandlingEmergency ? AppTheme.primaryRed : Colors.grey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const Spacer(),
-                // Bottom Shortcuts Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildBottomShortcut(
-                        icon: Icons.person_pin_rounded,
-                        label: "Guardian",
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SettingsScreen(
-                                onSettingsChanged: _loadLocalSettings,
-                              ),
-                            ),
-                          );
-                          _loadLocalSettings();
-                        },
-                      ),
-                      _buildBottomShortcut(
-                        icon: Icons.history_rounded,
-                        label: "History",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HistoryScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _buildBottomShortcut(
-                        icon: Icons.settings_rounded,
-                        label: "Settings",
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SettingsScreen(
-                                onSettingsChanged: _loadLocalSettings,
-                              ),
-                            ),
-                          );
-                          _loadLocalSettings();
-                        },
-                      ),
-                      _buildBottomShortcut(
-                        icon: Icons.health_and_safety_rounded,
-                        label: "Help",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HelpScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        bottomNavigationBar: _buildBottomNavbar(colors),
       ),
     );
   }
 
-  Widget _buildBottomShortcut({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildHomeDashboard(SafeStepThemeColors colors) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
+      child: Column(
+        children: [
+          // 1. Status Card & Header Logo
+          StatusCard(
+            isSafe: _isSafe,
+            gpsReady: _gpsReady,
+            cameraReady: _cameraReady,
+            micReady: _micReady,
+            internetReady: _internetReady,
+            themePreset: _settings.themePreset,
+            onTapPermissions: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PermissionsScreen()),
+              );
+              _checkSystemStatus();
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // 2. Quick Feature Action Cards (Live Video, Voice, Live Location)
+          QuickActionCards(
+            themePreset: _settings.themePreset,
+            onLiveVideoTap: _onSOSPressed,
+            onVoiceRecorderTap: _onSOSPressed,
+            onLiveLocationTap: () async {
+              await _checkSystemStatus();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: colors.accentCyan,
+                    content: Text(
+                      _gpsReady
+                          ? "GPS Ready! Live location tracking active."
+                          : "Please grant GPS location permission.",
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+
+          const Spacer(),
+
+          // 3. Central Multi-Ring SOS Orb Button
+          SOSButton(
+            onTap: _onSOSPressed,
+            isRecording: _isHandlingEmergency,
+            themePreset: _settings.themePreset,
+          ),
+
+          const Spacer(),
+
+          // 4. Trigger Instruction Bar
+          TriggerInstructionBar(themePreset: _settings.themePreset),
+          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomNavbar(SafeStepThemeColors colors) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      decoration: BoxDecoration(
+        color: colors.navBg,
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(color: colors.cardBorder, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildNavItem(0, Icons.home_rounded, "Home", colors),
+          _buildNavItem(1, Icons.access_time_rounded, "History", colors),
+          _buildNavItem(2, Icons.supervisor_account_rounded, "Guardian", colors),
+          _buildNavItem(3, Icons.settings_outlined, "Settings", colors),
+          _buildNavItem(4, Icons.help_outline_rounded, "Help", colors),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label, SafeStepThemeColors colors) {
+    final isSelected = _selectedTabIndex == index;
+
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        setState(() {
+          _selectedTabIndex = index;
+        });
+      },
       borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: AppTheme.primaryRed, size: 24),
-            const SizedBox(height: 4),
+            // Active Tab Indicator Bar
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 3,
+              width: isSelected ? 22 : 0,
+              margin: const EdgeInsets.only(bottom: 6),
+              decoration: BoxDecoration(
+                color: colors.primaryRed,
+                borderRadius: BorderRadius.circular(2),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: colors.primaryRed,
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : [],
+              ),
+            ),
+            Icon(
+              icon,
+              color: isSelected ? colors.primaryRed : colors.textSecondary,
+              size: 24,
+            ),
+            const SizedBox(height: 3),
             Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? colors.textPrimary : colors.textSecondary,
               ),
             ),
           ],

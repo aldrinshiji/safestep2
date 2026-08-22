@@ -17,6 +17,7 @@ class AppConstants {
   static const String keyAutoUpload = 'auto_upload';
   static const String keySaveToGallery = 'save_to_gallery';
   static const String keyDarkMode = 'dark_mode';
+  static const String keyThemePreset = 'theme_preset'; // 'cyber_dark', 'midnight_blue', 'sunset_crimson', 'light_modern'
   static const String keyLanguage = 'language';
   static const String keyEnableCountdown = 'enable_countdown';
   static const String keyOfflineQueue = 'offline_emergencies_queue';
