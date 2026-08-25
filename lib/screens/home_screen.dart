@@ -364,100 +364,118 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHomeDashboard(SafeStepThemeColors colors) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 10.0),
-      child: Column(
-        children: [
-          // 1. Status Card & Header Logo
-          StatusCard(
-            isSafe: _isSafe,
-            gpsReady: _gpsReady,
-            cameraReady: _cameraReady,
-            micReady: _micReady,
-            internetReady: _internetReady,
-            themePreset: _settings.themePreset,
-            onTapPermissions: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const PermissionsScreen()),
-              );
-              _checkSystemStatus();
-            },
-          ),
-          const SizedBox(height: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenHeight = constraints.maxHeight;
+        final targetOrbDiameter = screenHeight < 550 ? 180.0 : (screenHeight < 680 ? 200.0 : 220.0);
 
-          // 2. Quick Feature Action Cards (Live Video, Voice, Live Location)
-          QuickActionCards(
-            themePreset: _settings.themePreset,
-            onLiveVideoTap: _onSOSPressed,
-            onVoiceRecorderTap: _onSOSPressed,
-            onLiveLocationTap: () async {
-              await _checkSystemStatus();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: colors.accentCyan,
-                    content: Text(
-                      _gpsReady
-                          ? "GPS Ready! Live location tracking active."
-                          : "Please grant GPS location permission.",
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-                    ),
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Top section (Status Card & Quick Action Cards)
+                  Column(
+                    children: [
+                      StatusCard(
+                        isSafe: _isSafe,
+                        gpsReady: _gpsReady,
+                        cameraReady: _cameraReady,
+                        micReady: _micReady,
+                        internetReady: _internetReady,
+                        themePreset: _settings.themePreset,
+                        onTapPermissions: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const PermissionsScreen()),
+                          );
+                          _checkSystemStatus();
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      QuickActionCards(
+                        themePreset: _settings.themePreset,
+                        onLiveVideoTap: _onSOSPressed,
+                        onVoiceRecorderTap: _onSOSPressed,
+                        onLiveLocationTap: () async {
+                          await _checkSystemStatus();
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: colors.accentCyan,
+                              content: Text(
+                                _gpsReady
+                                    ? "GPS Ready! Live location tracking active."
+                                    : "Please grant GPS location permission.",
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, color: Colors.black),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                );
-              }
-            },
+
+                  const SizedBox(height: 12),
+
+                  // Center Multi-Ring SOS Orb Button
+                  SOSButton(
+                    onTap: _onSOSPressed,
+                    isRecording: _isHandlingEmergency,
+                    themePreset: _settings.themePreset,
+                    targetDiameter: targetOrbDiameter,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Bottom Trigger Instruction Bar
+                  TriggerInstructionBar(themePreset: _settings.themePreset),
+                  const SizedBox(height: 4),
+                ],
+              ),
+            ),
           ),
-
-          const Spacer(),
-
-          // 3. Central Multi-Ring SOS Orb Button
-          SOSButton(
-            onTap: _onSOSPressed,
-            isRecording: _isHandlingEmergency,
-            themePreset: _settings.themePreset,
-          ),
-
-          const Spacer(),
-
-          // 4. Trigger Instruction Bar
-          TriggerInstructionBar(themePreset: _settings.themePreset),
-          const SizedBox(height: 10),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildBottomNavbar(SafeStepThemeColors colors) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       decoration: BoxDecoration(
         color: colors.navBg,
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: colors.cardBorder, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildNavItem(0, Icons.home_rounded, "Home", colors),
-          _buildNavItem(1, Icons.access_time_rounded, "History", colors),
-          _buildNavItem(2, Icons.supervisor_account_rounded, "Guardian", colors),
-          _buildNavItem(3, Icons.settings_outlined, "Settings", colors),
-          _buildNavItem(4, Icons.help_outline_rounded, "Help", colors),
+          Expanded(child: _buildNavItem(0, Icons.home_rounded, "Home", colors)),
+          Expanded(child: _buildNavItem(1, Icons.access_time_rounded, "History", colors)),
+          Expanded(child: _buildNavItem(2, Icons.supervisor_account_rounded, "Guardian", colors)),
+          Expanded(child: _buildNavItem(3, Icons.settings_outlined, "Settings", colors)),
+          Expanded(child: _buildNavItem(4, Icons.help_outline_rounded, "Help", colors)),
         ],
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, SafeStepThemeColors colors) {
+  Widget _buildNavItem(
+      int index, IconData icon, String label, SafeStepThemeColors colors) {
     final isSelected = _selectedTabIndex == index;
 
     return InkWell(
@@ -468,7 +486,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -476,8 +494,8 @@ class _HomeScreenState extends State<HomeScreen> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               height: 3,
-              width: isSelected ? 22 : 0,
-              margin: const EdgeInsets.only(bottom: 6),
+              width: isSelected ? 20 : 0,
+              margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
                 color: colors.primaryRed,
                 borderRadius: BorderRadius.circular(2),
@@ -495,15 +513,18 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               icon,
               color: isSelected ? colors.primaryRed : colors.textSecondary,
-              size: 24,
+              size: 22,
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? colors.textPrimary : colors.textSecondary,
+            const SizedBox(height: 2),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  color: isSelected ? colors.textPrimary : colors.textSecondary,
+                ),
               ),
             ),
           ],

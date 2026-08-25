@@ -14,7 +14,7 @@ class TriggerInstructionBar extends StatelessWidget {
     final colors = AppTheme.getColors(themePreset);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: colors.cardBg,
         borderRadius: BorderRadius.circular(20),
@@ -22,7 +22,7 @@ class TriggerInstructionBar extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -31,42 +31,49 @@ class TriggerInstructionBar extends StatelessWidget {
         children: [
           // Lightning bolt + Label
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.bolt_rounded,
                 color: colors.primaryRed,
-                size: 20,
+                size: 18,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 3),
               Text(
                 "Activate SOS by:",
                 style: TextStyle(
                   color: colors.primaryRed,
-                  fontSize: 11.5,
+                  fontSize: 10.5,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 6),
           Expanded(
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _buildTriggerChip(
-                  context,
-                  icon: Icons.touch_app_outlined,
-                  label: "Tap Button",
+                Expanded(
+                  child: _buildTriggerChip(
+                    context,
+                    icon: Icons.touch_app_outlined,
+                    label: "Tap Button",
+                  ),
                 ),
-                _buildTriggerChip(
-                  context,
-                  icon: Icons.vibration_rounded,
-                  label: "Shake Device",
+                Expanded(
+                  child: _buildTriggerChip(
+                    context,
+                    icon: Icons.vibration_rounded,
+                    label: "Shake Device",
+                  ),
                 ),
-                _buildTriggerChip(
-                  context,
-                  icon: Icons.volume_down_rounded,
-                  label: "Long press Volume",
+                Expanded(
+                  child: _buildTriggerChip(
+                    context,
+                    icon: Icons.volume_down_rounded,
+                    label: "Long press Vol",
+                  ),
                 ),
               ],
             ),
@@ -85,15 +92,18 @@ class TriggerInstructionBar extends StatelessWidget {
         Icon(
           icon,
           color: colors.primaryRed.withOpacity(0.85),
-          size: 18,
+          size: 16,
         ),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w600,
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontSize: 9.0,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],

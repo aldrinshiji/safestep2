@@ -157,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               controller: _scrollController,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -177,6 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Column(
                           children: [
                             DropdownButtonFormField<String>(
+                              isExpanded: true,
                               value: _settings.themePreset,
                               dropdownColor: colors.cardBg,
                               decoration: InputDecoration(
@@ -186,19 +187,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               items: const [
                                 DropdownMenuItem(
                                   value: 'cyber_dark',
-                                  child: Text('Cyber Dark (Default Screenshot UI)'),
+                                  child: Text('Cyber Dark (Default Screenshot UI)', overflow: TextOverflow.ellipsis),
                                 ),
                                 DropdownMenuItem(
                                   value: 'midnight_blue',
-                                  child: Text('Midnight Sapphire'),
+                                  child: Text('Midnight Sapphire', overflow: TextOverflow.ellipsis),
                                 ),
                                 DropdownMenuItem(
                                   value: 'sunset_crimson',
-                                  child: Text('Sunset Crimson'),
+                                  child: Text('Sunset Crimson', overflow: TextOverflow.ellipsis),
                                 ),
                                 DropdownMenuItem(
                                   value: 'light_modern',
-                                  child: Text('Light Modern'),
+                                  child: Text('Light Modern', overflow: TextOverflow.ellipsis),
                                 ),
                               ],
                               onChanged: (val) {
@@ -327,6 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Column(
                           children: [
                             DropdownButtonFormField<int>(
+                              isExpanded: true,
                               value: _settings.videoDuration,
                               dropdownColor: colors.cardBg,
                               decoration: InputDecoration(
@@ -334,10 +336,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 prefixIcon: Icon(Icons.videocam_outlined, color: colors.primaryRed),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 10, child: Text("10 Seconds")),
-                                DropdownMenuItem(value: 20, child: Text("20 Seconds")),
-                                DropdownMenuItem(value: 30, child: Text("30 Seconds")),
-                                DropdownMenuItem(value: 60, child: Text("60 Seconds")),
+                                DropdownMenuItem(value: 10, child: Text("10 Seconds", overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 20, child: Text("20 Seconds", overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 30, child: Text("30 Seconds", overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 60, child: Text("60 Seconds", overflow: TextOverflow.ellipsis)),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
@@ -349,6 +351,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
+                              isExpanded: true,
                               value: _settings.alertMethod,
                               dropdownColor: colors.cardBg,
                               decoration: InputDecoration(
@@ -356,10 +359,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 prefixIcon: Icon(Icons.send_rounded, color: colors.accentCyan),
                               ),
                               items: const [
-                                DropdownMenuItem(value: 'sms', child: Text('Automatic SMS (No Tap Required)')),
-                                DropdownMenuItem(value: 'email', child: Text('Email Alert (Pre-filled 1-Tap)')),
-                                DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp Direct (Pre-filled 1-Tap)')),
-                                DropdownMenuItem(value: 'share', child: Text('Native System Share Sheet')),
+                                DropdownMenuItem(value: 'sms', child: Text('Automatic SMS (No Tap Required)', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 'email', child: Text('Email Alert (Pre-filled 1-Tap)', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 'whatsapp', child: Text('WhatsApp Direct (Pre-filled 1-Tap)', overflow: TextOverflow.ellipsis)),
+                                DropdownMenuItem(value: 'share', child: Text('Native System Share Sheet', overflow: TextOverflow.ellipsis)),
                               ],
                               onChanged: (val) {
                                 if (val != null) {
